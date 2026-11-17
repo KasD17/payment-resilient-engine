@@ -1,4 +1,4 @@
-# 💳 Payment Resilient Engine (Fintech & E-Commerce API)
+# Payment Resilient Engine (Fintech & E-Commerce API)
 
 <p align="center">
   <img src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3" />
@@ -13,7 +13,7 @@
 
 ---
 
-## 📌 Problem Statement & Engineering Philosophy
+## Problem Statement & Engineering Philosophy
 
 In modern fintech and high-volume e-commerce applications, **network timeouts, concurrent requests, and webhook delivery retries** cause critical issues:
 1. **Double Charges:** A client encounters a network drop right after a charge is dispatched, clicks "Pay Now" again, and gets charged twice.
@@ -22,19 +22,19 @@ In modern fintech and high-volume e-commerce applications, **network timeouts, c
 4. **Data Race Conditions:** Concurrent updates to balances or subscription states lead to dirty reads and inconsistent states.
 
 **Payment Resilient Engine** solves these challenges using **Enterprise-Grade Design Patterns**:
-- 🛡️ **IETF RFC Idempotency Key Engine** with SHA-256 fingerprinting to eliminate duplicate charges.
-- ⚡ **Ultra-Fast Webhook Pipeline (< 50ms ACK)** with cryptographic HMAC signature verification and background queue execution.
-- 🔁 **Exponential Backoff & Dead Letter Queue (DLQ)** for automated resilience against transient failures.
-- 🛠️ **DLQ Management CLI (`php artisan webhooks:retry`)** to audit and re-process failed events safely.
-- 🔒 **ACID Atomic Transactions & Pessimistic Row Locking (`lockForUpdate`)**.
-- 🧩 **Strategy Pattern & DTOs** enabling seamless multi-gateway swapping (`StripePaymentGateway`, `PayPalPaymentGateway`).
-- 📄 **Automated PDF Invoice Generation (DomPDF)** on confirmed recurring payments.
-- 🖥️ **Interactive Fintech Dashboard & Playground (`/`)** with live idempotency simulation, webhook triggers, and direct PDF downloads.
-- 🚀 **Automated CI/CD Pipeline** with GitHub Actions and full PHPUnit & Pint linting.
+- **IETF RFC Idempotency Key Engine** with SHA-256 fingerprinting to eliminate duplicate charges.
+-  **Ultra-Fast Webhook Pipeline (< 50ms ACK)** with cryptographic HMAC signature verification and background queue execution.
+- **Exponential Backoff & Dead Letter Queue (DLQ)** for automated resilience against transient failures.
+-  **DLQ Management CLI (`php artisan webhooks:retry`)** to audit and re-process failed events safely.
+-  **ACID Atomic Transactions & Pessimistic Row Locking (`lockForUpdate`)**.
+-  **Strategy Pattern & DTOs** enabling seamless multi-gateway swapping (`StripePaymentGateway`, `PayPalPaymentGateway`).
+-  **Automated PDF Invoice Generation (DomPDF)** on confirmed recurring payments.
+-  **Interactive Fintech Dashboard & Playground (`/`)** with live idempotency simulation, webhook triggers, and direct PDF downloads.
+-  **Automated CI/CD Pipeline** with GitHub Actions and full PHPUnit & Pint linting.
 
 ---
 
-## 🏛️ System Architecture
+##  System Architecture
 
 ### 1. Payment Idempotency Flow (Zero Double-Charges)
 
@@ -114,7 +114,7 @@ flowchart TD
 
 ---
 
-## 🚀 Key Features & Engineering Highlights
+##  Key Features & Engineering Highlights
 
 | Feature | Engineering Implementation | Benefit |
 | :--- | :--- | :--- |
@@ -130,7 +130,7 @@ flowchart TD
 
 ---
 
-## 🧩 Strategy Pattern in Action: Multi-Gateway Support
+##  Strategy Pattern in Action: Multi-Gateway Support
 
 The application decouples payment logic completely from third-party vendor SDKs. Switch between Stripe and PayPal by configuring `.env`:
 
@@ -152,7 +152,7 @@ $result = $paypal->charge($paymentDTO);
 
 ---
 
-## 🛠️ Dead Letter Queue (DLQ) Recovery Command
+##  Dead Letter Queue (DLQ) Recovery Command
 
 When external systems fail or timeouts occur beyond the maximum 3 retries, events are isolated in `webhook_events` with status `failed` and the complete stack trace in `last_error`.
 
@@ -179,10 +179,10 @@ Successfully recovered and re-queued [2] failed webhook event(s):
 
 ---
 
-## 🔌 API Endpoints Specification & Postman Collection
+##  API Endpoints Specification & Postman Collection
 
 Import the included ready-to-use Postman collection:
-📂 `docs/payment-resilient-engine.postman_collection.json`
+ `docs/payment-resilient-engine.postman_collection.json`
 
 *(Features dynamic `Idempotency-Key` auto-generation using `{{$guid}}`, pre-configured happy paths, cache replay validations, and payload tampering tests).*
 
@@ -300,7 +300,7 @@ Stripe-Signature: t=1614555000,v1=5257a869e7ecebeda32affa62cd...
 
 ---
 
-## 🧪 Testing Suite & Quality Assurance
+##  Testing Suite & Quality Assurance
 
 The project comes with a comprehensive suite of automated tests verifying business logic, multi-gateway strategy swapping, cryptographic signatures, and failure recovery:
 
@@ -368,7 +368,7 @@ php artisan test
 
 ---
 
-## 📤 Publishing to GitHub
+##  Publishing to GitHub
 
 To push this project to your GitHub profile:
 ```bash
@@ -385,7 +385,7 @@ git push -u origin main
 
 ---
 
-## 👨‍💻 Author & Engineering Standards
+##  Author & Engineering Standards
 Developed with precision by a **Senior Backend & Software Architect** adhering to:
 - **SOLID Principles** & **Clean Architecture**
 - **Domain-Driven Design (DDD)** concepts with DTOs and Enums
