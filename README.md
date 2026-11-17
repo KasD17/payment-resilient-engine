@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3" />
   <img src="https://img.shields.io/badge/Laravel-11%20%2F%2012-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel" />
   <img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI/CD" />
-  <img src="https://img.shields.io/badge/Tests-26%20Passed%20(115%20assertions)-success?style=for-the-badge&logo=phpunit&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/Tests-30%20Passed%20(128%20assertions)-success?style=for-the-badge&logo=phpunit&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/Code%20Style-Pint-informational?style=for-the-badge&logo=php" alt="Pint" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
 </p>
@@ -29,6 +29,7 @@ In modern fintech and high-volume e-commerce applications, **network timeouts, c
 - 🔒 **ACID Atomic Transactions & Pessimistic Row Locking (`lockForUpdate`)**.
 - 🧩 **Strategy Pattern & DTOs** enabling seamless multi-gateway swapping (`StripePaymentGateway`, `PayPalPaymentGateway`).
 - 📄 **Automated PDF Invoice Generation (DomPDF)** on confirmed recurring payments.
+- 🖥️ **Interactive Fintech Dashboard & Playground (`/`)** with live idempotency simulation, webhook triggers, and direct PDF downloads.
 - 🚀 **Automated CI/CD Pipeline** with GitHub Actions and full PHPUnit & Pint linting.
 
 ---
