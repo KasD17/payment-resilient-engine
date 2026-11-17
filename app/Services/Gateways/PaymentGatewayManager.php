@@ -15,9 +15,11 @@ class PaymentGatewayManager
     protected array $gateways = [];
 
     public function __construct(
-        protected StripePaymentGateway $stripeGateway
+        protected StripePaymentGateway $stripeGateway,
+        protected PayPalPaymentGateway $paypalGateway
     ) {
         $this->gateways['stripe'] = $this->stripeGateway;
+        $this->gateways['paypal'] = $this->paypalGateway;
     }
 
     public function gateway(?string $name = null): PaymentGatewayInterface

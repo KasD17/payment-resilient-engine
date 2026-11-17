@@ -3,12 +3,13 @@
 <p align="center">
   <img src="https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP 8.3" />
   <img src="https://img.shields.io/badge/Laravel-11%20%2F%2012-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel" />
-  <img src="https://img.shields.io/badge/Tests-20%20Passed%20(90%20assertions)-success?style=for-the-badge&logo=phpunit&logoColor=white" alt="Tests" />
+  <img src="https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI/CD" />
+  <img src="https://img.shields.io/badge/Tests-26%20Passed%20(115%20assertions)-success?style=for-the-badge&logo=phpunit&logoColor=white" alt="Tests" />
   <img src="https://img.shields.io/badge/Code%20Style-Pint-informational?style=for-the-badge&logo=php" alt="Pint" />
   <img src="https://img.shields.io/badge/License-MIT-blue?style=for-the-badge" alt="License" />
 </p>
 
-> **High-availability, fault-tolerant Payment & Subscription REST API** engineered in PHP 8.3 and Laravel 11/12. Designed to prevent double charges (*Zero Double-Charges*), process webhook events asynchronously with cryptographic signature validation under 100ms, guarantee ACID consistency with pessimistic locking, and automatically generate PDF invoices.
+> **High-availability, fault-tolerant Payment & Subscription REST API** engineered in PHP 8.3 and Laravel 11/12. Designed to prevent double charges (*Zero Double-Charges*), process webhook events asynchronously with cryptographic signature validation under 100ms, guarantee ACID consistency with pessimistic locking, manage Dead Letter Queues (DLQ), support multi-gateways via Strategy Pattern (Stripe & PayPal), and automatically generate PDF invoices.
 
 ---
 
@@ -16,7 +17,7 @@
 
 In modern fintech and high-volume e-commerce applications, **network timeouts, concurrent requests, and webhook delivery retries** cause critical issues:
 1. **Double Charges:** A client encounters a network drop right after a charge is dispatched, clicks "Pay Now" again, and gets charged twice.
-2. **Webhook Timeouts & Throttling:** Payment gateways (such as Stripe) expect webhooks to respond with `200 OK` in under 2 seconds; doing heavy business logic synchronously during the HTTP request causes gateway timeouts, repeated retries, and cascade failures.
+2. **Webhook Timeouts & Throttling:** Payment gateways (such as Stripe or PayPal) expect webhooks to respond with `200 OK` in under 2 seconds; doing heavy business logic synchronously during the HTTP request causes gateway timeouts, repeated retries, and cascade failures.
 3. **Out-of-Order Webhook Delivery:** Gateways do not guarantee events arrive in chronological order (`invoice.payment_succeeded` may arrive before `customer.subscription.created`).
 4. **Data Race Conditions:** Concurrent updates to balances or subscription states lead to dirty reads and inconsistent states.
 
@@ -24,9 +25,11 @@ In modern fintech and high-volume e-commerce applications, **network timeouts, c
 - 🛡️ **IETF RFC Idempotency Key Engine** with SHA-256 fingerprinting to eliminate duplicate charges.
 - ⚡ **Ultra-Fast Webhook Pipeline (< 50ms ACK)** with cryptographic HMAC signature verification and background queue execution.
 - 🔁 **Exponential Backoff & Dead Letter Queue (DLQ)** for automated resilience against transient failures.
+- 🛠️ **DLQ Management CLI (`php artisan webhooks:retry`)** to audit and re-process failed events safely.
 - 🔒 **ACID Atomic Transactions & Pessimistic Row Locking (`lockForUpdate`)**.
-- 🧩 **Strategy Pattern & DTOs** enabling seamless multi-gateway swapping (Stripe, PayPal, MercadoPago).
+- 🧩 **Strategy Pattern & DTOs** enabling seamless multi-gateway swapping (`StripePaymentGateway`, `PayPalPaymentGateway`).
 - 📄 **Automated PDF Invoice Generation (DomPDF)** on confirmed recurring payments.
+- 🚀 **Automated CI/CD Pipeline** with GitHub Actions and full PHPUnit & Pint linting.
 
 ---
 
@@ -41,7 +44,7 @@ sequenceDiagram
     participant Middleware as IdempotencyMiddleware
     participant DB as Idempotency Table (idempotency_keys)
     participant Service as PaymentService (DB::transaction)
-    participant Gateway as StripePaymentGateway
+    participant Gateway as Stripe / PayPal Gateway
 
     Client->>Middleware: POST /api/v1/payments/charge (Header: Idempotency-Key: <UUID>)
     alt Header Missing
@@ -68,11 +71,11 @@ sequenceDiagram
     end
 ```
 
-### 2. Resilient Webhook Processing Pipeline
+### 2. Resilient Webhook Processing Pipeline & DLQ
 
 ```mermaid
 flowchart TD
-    A[Stripe Webhook Event] -->|POST /api/v1/webhooks/stripe| B(StripeWebhookController)
+    A[Stripe / PayPal Webhook Event] -->|POST /api/v1/webhooks/stripe| B(StripeWebhookController)
     
     subgraph Ingestion ["Ingestion Stage (< 50ms)"]
         B --> C{Verify HMAC Signature}
@@ -99,7 +102,12 @@ flowchart TD
         
         J -.->|On Failure| R{Attempts < 3?}
         R -->|Yes| S[Exponential Backoff: 10s, 60s, 300s]
-        R -->|No| T[webhook_events: failed + DLQ Log]
+        R -->|No| T[webhook_events: failed - Dead Letter Queue]
+    end
+
+    subgraph Operator ["DLQ Management CLI"]
+        T -.-> U["php artisan webhooks:retry --all"]
+        U -->|Reset to pending| G
     end
 ```
 
@@ -109,31 +117,73 @@ flowchart TD
 
 | Feature | Engineering Implementation | Benefit |
 | :--- | :--- | :--- |
-| **Strategy Pattern** | `PaymentGatewayInterface` with concrete `StripePaymentGateway` and `PaymentGatewayManager` | Decoupled architecture; allows switching or adding payment providers without touching controllers. |
+| **Strategy Pattern** | `PaymentGatewayInterface` with `StripePaymentGateway`, `PayPalPaymentGateway` & `PaymentGatewayManager` | Decoupled architecture; allows switching or adding payment providers without touching controllers. |
 | **Idempotency Engine** | `IdempotencyMiddleware` validating UUID keys, parameter hashing, and in-flight mutex locks | Eliminates double billing even with aggressive client retries or network drops. |
 | **Fast Webhook Ingestion** | HMAC-SHA256 signature check + atomic database persistence | Protects endpoints from timing attacks and server resource exhaustion. |
 | **Asynchronous Queues** | `ProcessStripeWebhookJob` with `$tries = 3` and `$backoff = [10, 60, 300]` | High throughput ingestion; worker handles transient third-party API issues. |
+| **DLQ Management CLI** | `php artisan webhooks:retry {event_id?} {--all}` command | Enables operations teams to audit, monitor, and recover poisoned or failed events safely. |
 | **ACID Transactions** | `DB::transaction()` with pessimistic `lockForUpdate()` | Eliminates race conditions on balance updates or recurring plan changes. |
-| **Foresic Audit Logging** | Polymorphic `audit_logs` tracking transitions (`old_values`, `new_values`, `ip`, `actor`) | Strict compliance with fintech and PCI-DSS auditability requirements. |
+| **Forensic Audit Logging** | Polymorphic `audit_logs` tracking transitions (`old_values`, `new_values`, `ip`, `actor`) | Strict compliance with fintech and PCI-DSS auditability requirements. |
 | **PDF Invoicing** | `InvoicePdfGenerator` using DomPDF with custom Blade templates | Automated professional PDF receipt issuance upon webhook payment confirmation. |
-| **100% Test Coverage** | PHPUnit Feature Tests covering happy paths, idempotency replays, tampered payloads, and job queues | Proven reliability and maintainability. |
+| **Automated CI/CD** | GitHub Actions running tests and Pint formatting on Ubuntu Linux | Guarantees quality gates and code standards on every commit. |
 
 ---
 
-## 🛠️ Tech Stack & Dependencies
+## 🧩 Strategy Pattern in Action: Multi-Gateway Support
 
-- **Language:** PHP 8.3+ (Strict types, Enums, Readonly DTOs, Constructor Promotion)
-- **Framework:** Laravel 11 / 12
-- **Database:** SQLite (local/test) / MySQL / PostgreSQL (production ready)
-- **Queue Driver:** Database / Redis
-- **Payment Provider SDK:** `stripe/stripe-php` v23+
-- **PDF Engine:** `barryvdh/laravel-dompdf` v3+
-- **Code Standards:** Laravel Pint (Strict formatting)
-- **Test Framework:** PHPUnit 12
+The application decouples payment logic completely from third-party vendor SDKs. Switch between Stripe and PayPal by configuring `.env`:
+
+```env
+# Switch seamlessly between Stripe and PayPal
+PAYMENT_DEFAULT_GATEWAY=stripe # or 'paypal'
+```
+
+Or resolve gateways on the fly via dependency injection:
+
+```php
+// Resolved via PaymentGatewayManager
+$stripe = $gatewayManager->gateway('stripe');
+$paypal = $gatewayManager->gateway('paypal');
+
+$result = $paypal->charge($paymentDTO);
+// Guaranteed unified PaymentResultDTO regardless of the vendor!
+```
 
 ---
 
-## 🔌 API Endpoints Specification
+## 🛠️ Dead Letter Queue (DLQ) Recovery Command
+
+When external systems fail or timeouts occur beyond the maximum 3 retries, events are isolated in `webhook_events` with status `failed` and the complete stack trace in `last_error`.
+
+Recover and re-dispatch failed events instantly:
+
+```bash
+# Reprocess all failed events:
+php artisan webhooks:retry --all
+
+# Or reprocess a single specific event:
+php artisan webhooks:retry evt_3MtwBwLkdIwHu7ix28a3tqPa
+```
+
+**Console Output:**
+```text
+Successfully recovered and re-queued [2] failed webhook event(s):
++----+----------------------+---------------------------+----------+-----------------------------------------------+
+| ID | Event ID             | Type                      | Attempts | Last Error                                    |
++----+----------------------+---------------------------+----------+-----------------------------------------------+
+| 14 | evt_pi_failed_001    | payment_intent.succeeded  | 3        | Database timeout during lockForUpdate...      |
+| 19 | evt_inv_failed_002   | invoice.payment_succeeded | 3        | Third-party PDF storage unreachable...        |
++----+----------------------+---------------------------+----------+-----------------------------------------------+
+```
+
+---
+
+## 🔌 API Endpoints Specification & Postman Collection
+
+Import the included ready-to-use Postman collection:
+📂 `docs/payment-resilient-engine.postman_collection.json`
+
+*(Features dynamic `Idempotency-Key` auto-generation using `{{$guid}}`, pre-configured happy paths, cache replay validations, and payload tampering tests).*
 
 ### 1. Process One-Time Charge
 ```http
@@ -147,7 +197,7 @@ Idempotency-Key: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
 **Request Body:**
 ```json
 {
-  "customer_id": "018f23a4-8b6a-7231-92b0-9b48c17b5f10",
+  "customer_id": "00000000-0000-0000-0000-000000000001",
   "amount": 5000,
   "currency": "USD",
   "payment_method_id": "pm_card_visa",
@@ -159,7 +209,7 @@ Idempotency-Key: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
 {
   "data": {
     "id": "018f23a5-1234-7231-92b0-9b48c17b5f11",
-    "customer_id": "018f23a4-8b6a-7231-92b0-9b48c17b5f10",
+    "customer_id": "00000000-0000-0000-0000-000000000001",
     "amount": 5000,
     "amount_formatted": "USD 50.00",
     "currency": "USD",
@@ -170,7 +220,7 @@ Idempotency-Key: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d
   }
 }
 ```
-*Note: If the same request is sent with the same `Idempotency-Key`, the exact same response is returned with headers `Idempotent-Replay: true` and `X-Cache-Lookup: HIT` without calling the payment gateway again.*
+*Note: If the exact request is re-submitted with the same `Idempotency-Key`, the exact cached response is returned with headers `Idempotent-Replay: true` and `X-Cache-Lookup: HIT` without calling the payment gateway again.*
 
 ---
 
@@ -186,7 +236,7 @@ Idempotency-Key: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 **Request Body:**
 ```json
 {
-  "customer_id": "018f23a4-8b6a-7231-92b0-9b48c17b5f10",
+  "customer_id": "00000000-0000-0000-0000-000000000001",
   "plan_code": "plan_pro_monthly",
   "price": 2900,
   "currency": "USD",
@@ -199,7 +249,7 @@ Idempotency-Key: 3fa85f64-5717-4562-b3fc-2c963f66afa6
 {
   "data": {
     "id": "018f23b1-9876-7231-92b0-9b48c17b5f22",
-    "customer_id": "018f23a4-8b6a-7231-92b0-9b48c17b5f10",
+    "customer_id": "00000000-0000-0000-0000-000000000001",
     "plan_code": "plan_pro_monthly",
     "status": "active",
     "price": 2900,
@@ -251,7 +301,7 @@ Stripe-Signature: t=1614555000,v1=5257a869e7ecebeda32affa62cd...
 
 ## 🧪 Testing Suite & Quality Assurance
 
-The project comes with a comprehensive suite of automated tests verifying business logic, cryptographic signature validation, concurrency, and failure modes:
+The project comes with a comprehensive suite of automated tests verifying business logic, multi-gateway strategy swapping, cryptographic signatures, and failure recovery:
 
 ```bash
 php artisan test
@@ -261,9 +311,11 @@ php artisan test
 - ✅ **Idempotency Header Check:** Rejection of requests lacking `Idempotency-Key`.
 - ✅ **Double-Charge Prevention:** Verifies that repeated requests return cached responses and only contact the gateway once.
 - ✅ **Anti-Tampering:** Rejection with `409 Conflict` if the same key is sent with modified amounts or parameters.
+- ✅ **Strategy Swapping:** Dynamic resolution and processing via Stripe or PayPal without touching domain controllers.
 - ✅ **Cryptographic Signature Verification:** Invalid or forged `Stripe-Signature` headers are blocked with `400 Bad Request`.
 - ✅ **Webhook Deduplication:** Re-delivered events are acknowledged (`200 OK duplicate_ignored`) without triggering duplicate jobs.
 - ✅ **Background Job Processing:** Asynchronous execution of `payment_intent.succeeded`, `invoice.payment_succeeded`, and `customer.subscription.deleted`.
+- ✅ **DLQ Recovery Command:** Recovers poisoned events, resets error counters, and re-dispatches worker jobs.
 - ✅ **PDF Invoice Generation:** Validates that confirmed invoices compile HTML and write PDF files to disk.
 - ✅ **Audit Logging:** Asserts that all state changes write immutable audit trails.
 
@@ -293,9 +345,9 @@ php artisan test
    php artisan key:generate
    ```
 
-4. **Run database migrations:**
+4. **Run database migrations and seed realistic test data:**
    ```bash
-   php artisan migrate
+   php artisan migrate --seed
    ```
 
 5. **Run the Queue Worker (for background webhook processing):**
@@ -312,6 +364,23 @@ php artisan test
    ```bash
    stripe listen --forward-to localhost:8000/api/v1/webhooks/stripe
    ```
+
+---
+
+## 📤 Publishing to GitHub
+
+To push this project to your GitHub profile:
+```bash
+# 1. Create a new empty repository on github.com (e.g. 'payment-resilient-engine')
+# 2. Add your remote repository:
+git remote add origin https://github.com/<YOUR-USERNAME>/payment-resilient-engine.git
+
+# 3. Rename branch to main if preferred:
+git branch -M main
+
+# 4. Push all commits and workflows:
+git push -u origin main
+```
 
 ---
 

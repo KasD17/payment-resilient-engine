@@ -1,0 +1,282 @@
+{
+	"info": {
+		"_postman_id": "c1f7b029-768f-4ad9-a764-8846c483a992",
+		"name": "Payment Resilient Engine API",
+		"description": "Production-ready Postman collection for the Payment Resilient Engine API. Includes pre-request scripts for dynamic UUID idempotency keys, replay test cases, and webhook simulations.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "1. Charge Customer (New Idempotency Key)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.upsert({",
+									"    key: 'Idempotency-Key',",
+									"    value: pm.variables.replaceIn('{{$guid}}')",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": \"00000000-0000-0000-0000-000000000001\",\n    \"amount\": 5000,\n    \"currency\": \"USD\",\n    \"payment_method_id\": \"pm_card_visa\",\n    \"description\": \"API One-Time Charge Demo\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/payments/charge",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"charge"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Replay Charge (Zero Double-Charges Cache Hit)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "demo-idempotency-key-12345"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": \"00000000-0000-0000-0000-000000000001\",\n    \"amount\": 5000,\n    \"currency\": \"USD\",\n    \"payment_method_id\": \"pm_card_visa\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/payments/charge",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"charge"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "3. Tampered Payload (409 Conflict Detected)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Idempotency-Key",
+								"value": "demo-idempotency-key-12345"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": \"00000000-0000-0000-0000-000000000001\",\n    \"amount\": 99999,\n    \"currency\": \"USD\",\n    \"payment_method_id\": \"pm_card_visa\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/payments/charge",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"charge"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "4. Get Payment Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/payments/00000000-0000-0000-0000-000000000020",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"payments",
+								"00000000-0000-0000-0000-000000000020"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Subscriptions",
+			"item": [
+				{
+					"name": "1. Create Subscription",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"pm.request.headers.upsert({",
+									"    key: 'Idempotency-Key',",
+									"    value: pm.variables.replaceIn('{{$guid}}')",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customer_id\": \"00000000-0000-0000-0000-000000000001\",\n    \"plan_code\": \"plan_enterprise_pro_monthly\",\n    \"price\": 9900,\n    \"currency\": \"USD\",\n    \"billing_interval\": \"monthly\",\n    \"payment_method_id\": \"pm_card_visa\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "2. Cancel Subscription",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/00000000-0000-0000-0000-000000000010/cancel",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"00000000-0000-0000-0000-000000000010",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Webhooks",
+			"item": [
+				{
+					"name": "1. Ingest Webhook (Stripe Signature Mock)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Stripe-Signature",
+								"value": "t=1614555000,v1=simulated_signature_hash"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"evt_simulated_postman_001\",\n    \"object\": \"event\",\n    \"type\": \"payment_intent.succeeded\",\n    \"data\": {\n        \"object\": {\n            \"id\": \"pi_demo_charge_success_001\",\n            \"amount\": 9900,\n            \"currency\": \"usd\",\n            \"status\": \"succeeded\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/webhooks/stripe",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"webhooks",
+								"stripe"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000"
+		}
+	]
+}
