@@ -368,23 +368,6 @@ php artisan test
 
 ---
 
-##  Publishing to GitHub
-
-To push this project to your GitHub profile:
-```bash
-# 1. Create a new empty repository on github.com (e.g. 'payment-resilient-engine')
-# 2. Add your remote repository:
-git remote add origin https://github.com/<YOUR-USERNAME>/payment-resilient-engine.git
-
-# 3. Rename branch to main if preferred:
-git branch -M main
-
-# 4. Push all commits and workflows:
-git push -u origin main
-```
-
----
-
 ##  Author & Engineering Standards
 Developed with precision by a **Senior Backend & Software Architect** adhering to:
 - **SOLID Principles** & **Clean Architecture**
